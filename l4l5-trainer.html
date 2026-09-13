@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L4/L5 Reha & Becken-Trainer</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #0f172a;
+            --text-muted: #64748b;
+            --accent-red: #ef4444;
+            --accent-green: #16a34a;
+            --border-radius: 16px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        body { background: var(--bg-color); color: var(--text-color); padding: 16px; max-width: 500px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 12px; padding: 12px; background: var(--card-bg); border-radius: var(--border-radius); }
+        .alert-box { background: #fef2f2; border-left: 4px solid var(--accent-red); padding: 10px; border-radius: 8px; margin-bottom: 12px; font-size: 0.82rem; color: #991b1b; }
+
+        .mode-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+        .mode-bar button { flex: 1; padding: 10px; border: none; border-radius: 10px; font-weight: 700; font-size: 0.85rem; cursor: pointer; background: #e2e8f0; color: #475569; }
+        .mode-bar button.active { background: var(--primary); color: #fff; }
+
+        .card { background: var(--card-bg); border-radius: var(--border-radius); padding: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .exercise-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; flex-wrap: wrap; }
+        .step-badge { background: #e0e7ff; color: var(--primary); font-weight: 700; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; }
+        .round-badge { background: #fef3c7; color: #92400e; font-weight: 700; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; }
+        .reps-badge { background: #f1f5f9; color: var(--text-muted); font-weight: 600; padding: 4px 8px; border-radius: 12px; font-size: 0.72rem; }
+        .exercise-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+        .svg-container { width: 100%; height: 150px; background: #f1f5f9; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 12px 0; }
+
+        .timer-display { text-align: center; margin: 10px 0; }
+        .time-text { font-size: 2.8rem; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; transition: color 0.2s; }
+        .time-text.countdown { color: var(--accent-red); }
+        .phase-label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+
+        .timer-controls { display: flex; gap: 8px; justify-content: center; }
+        button { padding: 10px 18px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem; }
+        .btn-primary { background: var(--primary); color: white; flex: 2; }
+        .btn-secondary { background: #e2e8f0; color: #475569; flex: 1; }
+        .btn-stop { background: var(--accent-red); color: white; flex: 1; }
+
+        .instructions { margin-top: 14px; border-top: 1px solid #e2e8f0; padding-top: 12px; font-size: 0.85rem; color: #475569; }
+        .instructions ol { padding-left: 18px; margin-bottom: 8px; }
+        .focus-box { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px; border-radius: 8px; font-size: 0.8rem; color: #166534; }
+        .nav-btns { display: flex; justify-content: space-between; margin-top: 12px; gap: 8px; }
+
+        .pause-screen { text-align: center; padding: 30px 10px; }
+        .pause-screen .phase-label { color: #92400e; }
+        .pause-screen .time-text { color: #f59e0b; }
+        .pause-next { margin-top: 14px; font-size: 0.95rem; color: var(--text-muted); }
+        .pause-next b { color: var(--text-color); }
+
+        .progress-track { display: flex; gap: 4px; margin: 10px 0 4px; }
+        .progress-dot { flex: 1; height: 5px; border-radius: 3px; background: #e2e8f0; }
+        .progress-dot.done { background: var(--accent-green); }
+        .progress-dot.current { background: var(--primary); }
+
+        .voice-toggle { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 10px; font-size: 0.78rem; color: var(--text-muted); }
+        .voice-toggle input { width: 16px; height: 16px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 style="font-size: 1.2rem;">L4/L5 Reha Trainer</h1>
+        <p style="font-size: 0.8rem; color: var(--text-muted);">Tägliche Übungen gegen Hohlkreuz & Ischias</p>
+    </header>
+
+    <div class="alert-box">
+        <strong>⚠️ Stopp-Regel:</strong> Sofort abbrechen bei stechendem Schmerz oder Ausstrahlung ins rechte Bein!
+    </div>
+
+    <div class="mode-bar">
+        <button id="manualModeBtn" class="active" onclick="setMode('manual')">Einzelübung</button>
+        <button id="autoModeBtn" onclick="setMode('auto')">▶ Komplettes Programm</button>
+    </div>
+
+    <div class="card" id="mainCard"></div>
+
+    <div class="voice-toggle">
+        <input type="checkbox" id="voiceCheckbox" checked onchange="voiceEnabled = this.checked">
+        <label for="voiceCheckbox">Ansagen vorlesen</label>
+    </div>
+
+    <script>
+        // ---- Übungsdaten (inkl. Runden & Wiederholungsangaben aus der Tabelle) ----
+        const exercises = [
+            {
+                title: "Hüftbeuger-Dehnung (Psoas)",
+                type: "Dehnung",
+                repsLabel: "2 × 45 Sek. pro Seite",
+                rounds: 2,
+                roundLabel: "Seite",
+                duration: 45,
+                instructions: [
+                    "Knieender Ausfallschritt (Knie gut polstern).",
+                    "Spann das Gesäß an und zieh das Schambein aktiv nach oben.",
+                    "Schiebe die Hüfte sanft nach vorne.",
+                    "Nicht ins Hohlkreuz fallen! 45 Sek. halten, dann Seite wechseln."
+                ],
+                focus: "Entlastet den Zug auf L4/L5, indem das Becken wieder aufgerichtet werden kann.",
+                svg: `<svg viewBox="0 0 200 120" width="100%" height="100%"><path d="M 0,100 L 200,100" stroke="#cbd5e1" stroke-width="3"/><circle cx="70" cy="35" r="8" fill="#2563eb"/><path d="M 70,43 L 70,70 L 40,100" stroke="#2563eb" stroke-width="6" fill="none"/><path d="M 70,70 L 100,80 L 100,100" stroke="#2563eb" stroke-width="6" fill="none"/><path d="M 60,65 Q 50,75 60,85" stroke="#ef4444" stroke-width="2" fill="none"/></svg>`
+            },
+            {
+                title: "Beckenkippung im Liegen",
+                type: "Ansteuerung",
+                repsLabel: "10–12 Wdh. (ca. 60 Sek.)",
+                rounds: 1,
+                roundLabel: null,
+                duration: 60,
+                instructions: [
+                    "Rückenlage, Beine angewinkelt, Füße flach aufgestellt.",
+                    "Atme aus und drücke die Lendenwirbelsäule flach auf den Boden.",
+                    "Bauchnabel nach innen ziehen, Schambein anheben.",
+                    "3 Sekunden halten, kurz lösen. 10-12 Wiederholungen."
+                ],
+                focus: "Trainiert die bewusste Entlastung der LWS (Lendenwirbelsäule flach auf den Boden pressen).",
+                svg: `<svg viewBox="0 0 200 120" width="100%" height="100%"><path d="M 0,100 L 200,100" stroke="#cbd5e1" stroke-width="3"/><circle cx="30" cy="90" r="8" fill="#2563eb"/><path d="M 38,92 L 110,92" stroke="#2563eb" stroke-width="6"/><path d="M 110,92 L 140,65 L 160,100" stroke="#2563eb" stroke-width="6" fill="none"/><path d="M 70,75 L 70,88" stroke="#ef4444" stroke-width="3"/></svg>`
+            },
+            {
+                title: "Glute Bridge (Beckenheben)",
+                type: "Kräftigung",
+                repsLabel: "10 Wdh. à 3 Sek. halten",
+                rounds: 1,
+                roundLabel: null,
+                duration: 60,
+                instructions: [
+                    "Rückenlage, Füße hüftbreit aufgestellt.",
+                    "Becken über das Gesäß anheben, bis Oberschenkel & Oberkörper eine Linie bilden.",
+                    "Wichtig: Keinesfalls ins Hohlkreuz drücken!",
+                    "Oben 2 Sek. halten, langsam absenken."
+                ],
+                focus: "Aktiviert das Gesäß, welches das Becken aktiv nach hinten aufrichtet.",
+                svg: `<svg viewBox="0 0 200 120" width="100%" height="100%"><path d="M 0,100 L 200,100" stroke="#cbd5e1" stroke-width="3"/><circle cx="30" cy="95" r="8" fill="#2563eb"/><path d="M 38,95 L 110,60 L 140,100" stroke="#2563eb" stroke-width="6" fill="none"/></svg>`
+            },
+            {
+                title: "Dead Bug (Modifiziert)",
+                type: "Core-Stabilität",
+                repsLabel: "10–12 Wdh. kontrolliert",
+                rounds: 1,
+                roundLabel: null,
+                duration: 60,
+                instructions: [
+                    "Rückenlage, Beine 90 Grad angehoben.",
+                    "Unterer Rücken presst durchgehend flach in den Boden.",
+                    "Ein Bein langsam leicht absenken und wieder anheben.",
+                    "Sofort stoppen, wenn der Rücken den Kontakt zum Boden verliert!"
+                ],
+                focus: "Baut das tiefe Rumpfkorsett auf, ohne die Wirbelsäule durch Crunches zu belasten.",
+                svg: `<svg viewBox="0 0 200 120" width="100%" height="100%"><path d="M 0,100 L 200,100" stroke="#cbd5e1" stroke-width="3"/><circle cx="30" cy="92" r="8" fill="#2563eb"/><path d="M 38,94 L 90,94" stroke="#2563eb" stroke-width="6"/><path d="M 90,94 L 90,65 L 120,65" stroke="#2563eb" stroke-width="5" fill="none"/><path d="M 90,94 L 115,80 L 140,88" stroke="#2563eb" stroke-width="5" fill="none"/></svg>`
+            },
+            {
+                title: "Piriformis-Dehnung",
+                type: "Entlastung",
+                repsLabel: "2 × 45 Sek. pro Seite",
+                rounds: 2,
+                roundLabel: "Seite",
+                duration: 45,
+                instructions: [
+                    "Rückenlage, rechtes Fußgelenk auf das linke Knie legen.",
+                    "Linken Oberschenkel mit beiden Händen greifen und sanft heranziehen.",
+                    "Spüre die Dehnung im rechten Gesäß.",
+                    "45–60 Sek. ruhig halten, danach Seite wechseln."
+                ],
+                focus: "Dehnt die tiefen Rotatoren im Gesäß und nimmt Druck vom ausstrahlenden Ischiasnerv.",
+                svg: `<svg viewBox="0 0 200 120" width="100%" height="100%"><path d="M 0,100 L 200,100" stroke="#cbd5e1" stroke-width="3"/><circle cx="30" cy="92" r="8" fill="#2563eb"/><path d="M 38,94 L 100,94" stroke="#2563eb" stroke-width="6"/><path d="M 100,94 L 120,65 L 150,100" stroke="#2563eb" stroke-width="5" fill="none"/><path d="M 105,78 L 135,78" stroke="#2563eb" stroke-width="5"/></svg>`
+            }
+        ];
+
+        const PAUSE_DURATION = 15;
+        const BEEP_LAST_SECONDS = 5;
+
+        let mode = 'manual';
+        let voiceEnabled = true;
+
+        // ---------- Sound (beep) via Web Audio ----------
+        let audioCtx = null;
+        function getAudioCtx() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            return audioCtx;
+        }
+        function beep(freq = 880, duration = 150, volume = 0.25) {
+            try {
+                const ctx = getAudioCtx();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.frequency.value = freq;
+                osc.type = 'sine';
+                gain.gain.value = volume;
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + duration / 1000);
+            } catch (e) { /* audio not available */ }
+        }
+        function finalBeep() { beep(1200, 350, 0.3); }
+
+        // Muss aus einem direkten Tap/Click heraus aufgerufen werden, sonst
+        // bleibt der AudioContext auf vielen mobilen Browsern stumm ("suspended").
+        function unlockAudio() {
+            try {
+                const ctx = getAudioCtx();
+                if (ctx.state === 'suspended') ctx.resume();
+                // Silent "Warm-up"-Ton, damit der Kanal sicher offen ist
+                beep(440, 30, 0.0001);
+            } catch (e) { /* ignore */ }
+        }
+
+        function testSound() {
+            unlockAudio();
+            beep(880, 200, 0.3);
+            setDiag('⏳ Sprachausgabe wird versucht...');
+            speak('Ton-Test. Wenn du das hörst, funktioniert die Sprachausgabe.', true);
+        }
+
+        // ---------- Voice (Speech Synthesis) ----------
+        let voicesReady = false;
+        let cachedVoices = [];
+        let utteranceRef = null; // Chrome kann das Utterance-Objekt vorzeitig entsorgen (GC-Bug) -> Referenz halten
+        function loadVoices() {
+            if (!window.speechSynthesis) return;
+            cachedVoices = window.speechSynthesis.getVoices();
+            if (cachedVoices.length > 0) voicesReady = true;
+        }
+        if (window.speechSynthesis) {
+            loadVoices();
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
+
+        function pickGermanVoice() {
+            if (!cachedVoices.length) loadVoices();
+            return cachedVoices.find(v => v.lang && v.lang.toLowerCase().startsWith('de')) || null;
+        }
+
+        function setDiag(text) {
+            const diagBox = document.getElementById('speechDiag');
+            if (diagBox) diagBox.innerText = text;
+        }
+
+        function speak(text, withDiag) {
+            if (!voiceEnabled) return;
+            if (!window.speechSynthesis) return;
+            try {
+                window.speechSynthesis.resume();
+                const u = new SpeechSynthesisUtterance(text);
+                u.lang = 'de-DE';
+                u.rate = 1.0;
+                u.volume = 1;
+                u.pitch = 1;
+                const v = pickGermanVoice();
+                if (v) u.voice = v;
+                if (withDiag) {
+                    u.onstart = () => setDiag('✅ Ansage gestartet (onstart hat gefeuert) – hörst du jetzt was?');
+                    u.onend = () => setDiag('Ansage beendet (onend gefeuert).');
+                    u.onerror = (e) => setDiag('❌ Fehler bei der Sprachausgabe: ' + (e.error || 'unbekannt'));
+                }
+                utteranceRef = u; // Referenz halten gegen Chrome-GC-Bug
+                window.speechSynthesis.speak(u);
+                if (withDiag) {
+                    setTimeout(() => {
+                        if (window.speechSynthesis.speaking) {
+                            // onstart evtl. nicht gefeuert, aber speaking=true -> Browser versucht es
+                        } else {
+                            setDiag('⚠️ speechSynthesis.speaking ist false kurz nach speak() – der Browser hat den Aufruf verworfen, ohne overhaupt zu starten.');
+                        }
+                    }, 150);
+                }
+            } catch (e) {
+                if (withDiag) setDiag('❌ Ausnahme beim Sprechen: ' + e.message);
+            }
+        }
+
+        function speechDiagnosis() {
+            if (!window.speechSynthesis) {
+                return 'Dieser Browser unterstützt keine Sprachausgabe (speechSynthesis fehlt).';
+            }
+            loadVoices();
+            const total = cachedVoices.length;
+            const de = cachedVoices.filter(v => v.lang && v.lang.toLowerCase().startsWith('de')).length;
+            if (total === 0) {
+                return 'speechSynthesis ist vorhanden, aber es sind 0 Stimmen installiert. Prüfe unter Android: Einstellungen → Sprachen & Eingabe → Text-in-Sprache-Ausgabe → Sprach-Engine/Sprachpakete installieren.';
+            }
+            if (de === 0) {
+                return `${total} Stimme(n) gefunden, aber keine deutsche. Es wird auf eine andere Sprache zurückgefallen oder gar nicht gesprochen. Deutsches Sprachpaket in den Android/Chrome-TTS-Einstellungen installieren.`;
+            }
+            return `${de} deutsche Stimme(n) verfügbar (von ${total} insgesamt) – Sprachausgabe sollte funktionieren.`;
+        }
+
+        // ===================================================================
+        // MANUAL MODE (einzelne Übung ansehen / manuell timen)
+        // ===================================================================
+        let currentEx = 0;
+        let manualTimer = null;
+        let manualTimeLeft = exercises[0].duration;
+        let manualRunning = false;
+        let manualBeepedAt = null;
+
+        function renderManual() {
+            const ex = exercises[currentEx];
+            manualTimeLeft = ex.duration;
+            manualBeepedAt = null;
+            const card = document.getElementById('mainCard');
+            card.innerHTML = `
+                <div class="exercise-header">
+                    <span class="step-badge">Übung ${currentEx + 1} von ${exercises.length}</span>
+                    <span class="reps-badge">${ex.repsLabel}</span>
+                </div>
+                <div class="exercise-title">${ex.title}</div>
+                <div class="svg-container">${ex.svg}</div>
+                <div class="timer-display">
+                    <div class="time-text" id="timerDisplay">${fmt(manualTimeLeft)}</div>
+                </div>
+                <div class="timer-controls">
+                    <button class="btn-primary" id="startBtn" onclick="toggleManualTimer()">▶ Start</button>
+                    <button class="btn-secondary" onclick="resetManualTimer()">↺ Reset</button>
+                </div>
+                <div class="instructions">
+                    <ol>${ex.instructions.map(i => `<li>${i}</li>`).join('')}</ol>
+                    <div class="focus-box">${ex.focus}</div>
+                </div>
+                <div class="nav-btns">
+                    <button class="btn-secondary" onclick="prevEx()">← Zurück</button>
+                    <button class="btn-secondary" onclick="nextEx()">Weiter →</button>
+                </div>
+            `;
+        }
+
+        function fmt(t) {
+            const m = Math.floor(t / 60).toString().padStart(2, '0');
+            const s = (t % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function toggleManualTimer() {
+            const disp = document.getElementById('timerDisplay');
+            const btn = document.getElementById('startBtn');
+            if (manualRunning) {
+                clearInterval(manualTimer);
+                manualRunning = false;
+                btn.innerText = '▶ Weiter';
+            } else {
+                unlockAudio();
+                manualRunning = true;
+                btn.innerText = '⏸ Pause';
+                manualTimer = setInterval(() => {
+                    manualTimeLeft--;
+                    disp.innerText = fmt(manualTimeLeft);
+                    disp.classList.toggle('countdown', manualTimeLeft <= BEEP_LAST_SECONDS && manualTimeLeft > 0);
+                    if (manualTimeLeft > 0 && manualTimeLeft <= BEEP_LAST_SECONDS) beep();
+                    if (manualTimeLeft <= 0) {
+                        clearInterval(manualTimer);
+                        manualRunning = false;
+                        finalBeep();
+                        btn.innerText = '✓ Fertig';
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetManualTimer() {
+            clearInterval(manualTimer);
+            manualRunning = false;
+            manualTimeLeft = exercises[currentEx].duration;
+            const disp = document.getElementById('timerDisplay');
+            if (disp) { disp.innerText = fmt(manualTimeLeft); disp.classList.remove('countdown'); }
+            const btn = document.getElementById('startBtn');
+            if (btn) btn.innerText = '▶ Start';
+        }
+
+        function nextEx() { if (currentEx < exercises.length - 1) { currentEx++; renderManual(); } }
+        function prevEx() { if (currentEx > 0) { currentEx--; renderManual(); } }
+
+        // ===================================================================
+        // AUTO MODE (komplettes Programm läuft automatisch durch)
+        // ===================================================================
+        // Sequenz aus Übungs-Steps und Pausen-Steps bauen
+        function buildSequence() {
+            const seq = [];
+            exercises.forEach((ex, exIdx) => {
+                for (let r = 1; r <= ex.rounds; r++) {
+                    seq.push({ type: 'exercise', exIdx, round: r, totalRounds: ex.rounds });
+                }
+            });
+            // Pausen zwischen allen Steps einfügen (nicht nach dem letzten)
+            const withPauses = [];
+            seq.forEach((step, i) => {
+                withPauses.push(step);
+                if (i < seq.length - 1) withPauses.push({ type: 'pause' });
+            });
+            return withPauses;
+        }
+
+        let sequence = [];
+        let seqIndex = 0;
+        let autoTimer = null;
+        let autoTimeLeft = 0;
+        let autoActive = false;
+
+        function totalExerciseSteps() {
+            return sequence.filter(s => s.type === 'exercise').length;
+        }
+        function exerciseStepPosition(idx) {
+            let pos = 0;
+            for (let i = 0; i <= idx; i++) if (sequence[i].type === 'exercise') pos++;
+            return pos;
+        }
+
+        function setMode(m) {
+            mode = m;
+            document.getElementById('manualModeBtn').classList.toggle('active', m === 'manual');
+            document.getElementById('autoModeBtn').classList.toggle('active', m === 'auto');
+            stopAuto(false);
+            if (m === 'manual') {
+                renderManual();
+            } else {
+                renderAutoIntro();
+            }
+        }
+
+        function renderAutoIntro() {
+            sequence = buildSequence();
+            seqIndex = 0;
+            const totalTime = sequence.reduce((sum, s) => {
+                if (s.type === 'pause') return sum + PAUSE_DURATION;
+                return sum + exercises[s.exIdx].duration;
+            }, 0);
+            const mins = Math.round(totalTime / 60);
+            const card = document.getElementById('mainCard');
+            card.innerHTML = `
+                <div style="text-align:center; padding: 10px 0;">
+                    <div class="exercise-title" style="margin-bottom:4px;">Komplettes Programm</div>
+                    <p style="font-size:0.85rem; color: var(--text-muted); margin-bottom:14px;">
+                        5 Übungen · ${totalExerciseSteps()} Durchgänge (inkl. Seitenwechsel) · ca. ${mins} Min. inkl. Pausen
+                    </p>
+                    <p style="font-size:0.8rem; color: var(--text-muted); margin-bottom:16px;">
+                        Vor jeder Übung wird der Name angesagt. Zwischen den Übungen gibt es ${PAUSE_DURATION} Sek. Pause zum Neupositionieren.
+                        Die letzten ${BEEP_LAST_SECONDS} Sekunden jeder Übung werden durch einen Piepton markiert.
+                    </p>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn-secondary" style="flex:1; padding:14px;" onclick="testSound()">🔊 Ton testen</button>
+                        <button class="btn-primary" style="flex:2; padding:14px;" onclick="startAutoSequence()">▶ Programm starten</button>
+                    </div>
+                    <p style="font-size:0.72rem; color: var(--text-muted); margin-top:10px;">
+                        Kein Ton? Prüfe den Stumm-Schalter am Handy und die Medienlautstärke. Falls die Sprachausgabe im Vorschaufenster generell nicht funktioniert, hörst du zumindest die Pieptöne.
+                    </p>
+                    <p id="speechDiag" style="font-size:0.75rem; color: var(--primary); margin-top:8px; font-weight:600;"></p>
+                </div>
+            `;
+        }
+
+        function startAutoSequence() {
+            unlockAudio();
+            autoActive = true;
+            seqIndex = 0;
+            runAutoStep();
+        }
+
+        function stopAuto(rerender = true) {
+            clearInterval(autoTimer);
+            autoActive = false;
+            window.speechSynthesis && window.speechSynthesis.cancel();
+            if (rerender && mode === 'auto') renderAutoIntro();
+        }
+
+        function announceForStep(idx) {
+            const step = sequence[idx];
+            if (step.type === 'exercise') {
+                const ex = exercises[step.exIdx];
+                const roundText = ex.roundLabel ? `, ${ex.roundLabel} ${step.round} von ${step.totalRounds}` : '';
+                speak(`Übung ${exerciseStepPosition(idx)}: ${ex.title}${roundText}`);
+            }
+        }
+
+        function runAutoStep() {
+            if (!autoActive || seqIndex >= sequence.length) {
+                autoActive = false;
+                if (seqIndex >= sequence.length) renderAutoDone();
+                return;
+            }
+            const step = sequence[seqIndex];
+            if (step.type === 'exercise') {
+                runAutoExerciseStep(step, seqIndex);
+            } else {
+                runAutoPauseStep(seqIndex);
+            }
+        }
+
+        function progressDotsHtml(currentIdx) {
+            const exSteps = sequence.map((s, i) => ({ s, i })).filter(x => x.s.type === 'exercise');
+            return `<div class="progress-track">${exSteps.map(x => {
+                let cls = 'progress-dot';
+                if (x.i < currentIdx) cls += ' done';
+                else if (x.i === currentIdx) cls += ' current';
+                return `<div class="${cls}"></div>`;
+            }).join('')}</div>`;
+        }
+
+        function runAutoExerciseStep(step, idx) {
+            const ex = exercises[step.exIdx];
+            autoTimeLeft = ex.duration;
+            announceForStep(idx);
+
+            const card = document.getElementById('mainCard');
+            const posLabel = `Übung ${exerciseStepPosition(idx)} von ${totalExerciseSteps()}`;
+            const roundBadge = ex.roundLabel ? `<span class="round-badge">${ex.roundLabel} ${step.round}/${step.totalRounds}</span>` : '';
+            card.innerHTML = `
+                ${progressDotsHtml(idx)}
+                <div class="exercise-header">
+                    <span class="step-badge">${posLabel}</span>
+                    ${roundBadge}
+                    <span class="reps-badge">${ex.repsLabel}</span>
+                </div>
+                <div class="exercise-title">${ex.title}</div>
+                <div class="svg-container">${ex.svg}</div>
+                <div class="timer-display">
+                    <div class="phase-label">Übung läuft</div>
+                    <div class="time-text" id="autoTimerDisplay">${fmt(autoTimeLeft)}</div>
+                </div>
+                <div class="timer-controls">
+                    <button class="btn-stop" style="flex:1" onclick="stopAuto()">⏹ Programm beenden</button>
+                </div>
+                <div class="instructions">
+                    <ol>${ex.instructions.map(i => `<li>${i}</li>`).join('')}</ol>
+                    <div class="focus-box">${ex.focus}</div>
+                </div>
+            `;
+
+            clearInterval(autoTimer);
+            autoTimer = setInterval(() => {
+                autoTimeLeft--;
+                const disp = document.getElementById('autoTimerDisplay');
+                if (disp) {
+                    disp.innerText = fmt(autoTimeLeft);
+                    disp.classList.toggle('countdown', autoTimeLeft <= BEEP_LAST_SECONDS && autoTimeLeft > 0);
+                }
+                if (autoTimeLeft > 0 && autoTimeLeft <= BEEP_LAST_SECONDS) beep();
+                if (autoTimeLeft <= 0) {
+                    clearInterval(autoTimer);
+                    finalBeep();
+                    seqIndex++;
+                    runAutoStep();
+                }
+            }, 1000);
+        }
+
+        function runAutoPauseStep(idx) {
+            autoTimeLeft = PAUSE_DURATION;
+            const nextStep = sequence[idx + 1];
+            const nextEx = exercises[nextStep.exIdx];
+            const nextRoundText = nextEx.roundLabel ? ` (${nextEx.roundLabel} ${nextStep.round}/${nextStep.totalRounds})` : '';
+            speak(`Pause. Nächste Übung: ${nextEx.title}${nextRoundText}`);
+
+            const card = document.getElementById('mainCard');
+            card.innerHTML = `
+                ${progressDotsHtml(idx)}
+                <div class="pause-screen">
+                    <div class="phase-label">Pause – Neu positionieren</div>
+                    <div class="time-text" id="autoTimerDisplay">${fmt(autoTimeLeft)}</div>
+                    <div class="pause-next">Nächste Übung: <b>${nextEx.title}${nextRoundText}</b></div>
+                </div>
+                <div class="timer-controls" style="margin-top:16px;">
+                    <button class="btn-stop" style="flex:1" onclick="stopAuto()">⏹ Programm beenden</button>
+                </div>
+            `;
+
+            clearInterval(autoTimer);
+            autoTimer = setInterval(() => {
+                autoTimeLeft--;
+                const disp = document.getElementById('autoTimerDisplay');
+                if (disp) disp.innerText = fmt(autoTimeLeft);
+                if (autoTimeLeft <= 0) {
+                    clearInterval(autoTimer);
+                    seqIndex++;
+                    runAutoStep();
+                }
+            }, 1000);
+        }
+
+        function renderAutoDone() {
+            speak('Programm abgeschlossen. Gut gemacht!');
+            const card = document.getElementById('mainCard');
+            card.innerHTML = `
+                <div style="text-align:center; padding: 30px 10px;">
+                    <div class="exercise-title" style="margin-bottom:10px;">✅ Programm abgeschlossen</div>
+                    <p style="font-size:0.9rem; color: var(--text-muted); margin-bottom:18px;">Gut gemacht! Alle 5 Übungen sind durch.</p>
+                    <button class="btn-primary" style="width:100%; padding:14px;" onclick="renderAutoIntro()">↺ Nochmal starten</button>
+                </div>
+            `;
+        }
+
+        // ---------- Init ----------
+        renderManual();
+    </script>
+</body>
+</html>
